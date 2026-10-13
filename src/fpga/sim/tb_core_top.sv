@@ -189,12 +189,21 @@ module tb_core_top;
   int unsigned vs_count = 0;
   int unsigned hs_count = 0;
 
+  // While expect_idle is set, every pixel clock with any video output active counts as busy.
+  var logic expect_idle = 1'b0;
+  int unsigned busy_cycles = 0;
+
   always @(posedge video_rgb_clock) begin
     if (video_vs === 1'b1) begin
       vs_count <= vs_count + 1;
     end
     if (video_hs === 1'b1) begin
       hs_count <= hs_count + 1;
+    end
+
+    if (expect_idle && (video_de !== 1'b0 || video_hs !== 1'b0 || video_vs !== 1'b0 ||
+                        video_rgb !== '0)) begin
+      busy_cycles <= busy_cycles + 1;
     end
   end
 
@@ -217,6 +226,8 @@ module tb_core_top;
   initial begin
     logic [15:0] result;
     logic [31:0] word;
+    int unsigned vs_seen;
+    int unsigned hs_seen;
 
     // The PLL model locks after a few microseconds.
     wait (dut.video_rgb_clock === 1'b1);
@@ -236,6 +247,27 @@ module tb_core_top;
     #100us;
     check("video_runs_after_reset", vs_count == 1 && hs_count >= 3, $sformatf(
           "expected 1 vs and 3+ hs, got %0d vs and %0d hs", vs_count, hs_count));
+
+    // A menu reset sends reset enter, then reset exit. Start it as a line's active video begins,
+    // so reset lands with video_de high. The video must stay idle for a whole line in reset, then
+    // start a new frame on exit.
+    @(posedge video_de);
+    run_command("menu_reset_enter", 16'h0010, '0, result);
+    #1us;
+    expect_idle = 1'b1;
+    #40us;
+    expect_idle = 1'b0;
+    check("video_idle_in_reset", busy_cycles == 0, $sformatf(
+          "video outputs active for %0d pixel clocks in reset", busy_cycles));
+
+    vs_seen = vs_count;
+    hs_seen = hs_count;
+    run_command("menu_reset_exit", 16'h0011, '0, result);
+    #100us;
+    vs_seen = vs_count - vs_seen;
+    hs_seen = hs_count - hs_seen;
+    check("video_restarts_after_reset", vs_seen == 1 && hs_seen >= 3, $sformatf(
+          "expected 1 vs and 3+ hs, got %0d vs and %0d hs", vs_seen, hs_seen));
 
     run_command("unknown_command", 16'h7777, '0, result);
     check("unknown_command", result == RESULT_UNKNOWN, $sformatf("result %04h", result));

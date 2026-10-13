@@ -5,7 +5,12 @@
 //   - The PLL makes clk_core_12288 and clk_core_12288_90deg from clk_74a.
 //   - pll_core_locked is the PLL's lock, synchronized to clk_74a.
 //   - reset_n_12288 is reset_n from the host command handler, synchronized to clk_core_12288 and
-//     held low until the PLL locks. Use it as a synchronous reset in that domain.
+//     held low until the PLL locks. Use it as a synchronous reset in that domain. The synchronizer
+//     runs on clk_core_12288, so a lost lock resets the domain only while that clock still
+//     toggles. A template accepts this: clk_74a comes from a fixed oscillator and nothing resets
+//     the PLL, so lock shouldn't drop after boot, and the demo video recovers in a frame anyway.
+//     A core whose state must not survive a lost lock should hold reset_n_12288 low for a count
+//     of clk_core_12288 cycles after lock returns.
 //   - Each bit of level_74a reaches level_12288 through a three-register synchronizer. Each bit
 //     must be a level on its own. Never cross a multi-bit value this way.
 //   - Each bit of pulse_74a is a one-cycle event, and reaches pulse_12288 through a toggle

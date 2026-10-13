@@ -328,6 +328,8 @@ module core_top
   var dataslot_to_core_t dataslot_to_core;
   var rtc_osnotify_to_core_t rtc_osnotify_to_core;
 
+  // Each pulse needs its own host command write, and bridge transactions are at least 88 clk_74a
+  // cycles apart (apf/io_bridge_peripheral.v), so they meet the 25-cycle spacing core_clocks needs.
   core_clocks #(
       .LEVEL_WIDTH(2),
       .PULSE_WIDTH(2)
@@ -442,6 +444,12 @@ module core_top
   assign video_hs = vidout_hs;
 
   always_ff @(posedge clk_core_12288) begin
+    // Every output defaults to idle, in reset too. Inactive screen areas are black.
+    vidout_de   <= 0;
+    vidout_skip <= 0;
+    vidout_vs   <= 0;
+    vidout_hs   <= 0;
+    vidout_rgb  <= 24'h0;
 
     if (!reset_n_12288) begin
 
@@ -449,11 +457,6 @@ module core_top
       y_count <= 0;
 
     end else begin
-      vidout_de <= 0;
-      vidout_skip <= 0;
-      vidout_vs <= 0;
-      vidout_hs <= 0;
-
       vidout_hs_1 <= vidout_hs;
       vidout_de_1 <= vidout_de;
 
@@ -483,8 +486,6 @@ module core_top
         vidout_hs <= 1;
       end
 
-      // inactive screen areas are black
-      vidout_rgb <= 24'h0;
       // generate active video
       if (x_count >= VID_H_BPORCH && x_count < VID_H_ACTIVE + VID_H_BPORCH) begin
 

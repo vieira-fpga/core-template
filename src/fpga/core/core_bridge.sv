@@ -89,6 +89,17 @@ module core_bridge
     host_response = dataslot_response | savestate_response | rtc_osnotify_response;
   end
 
+  // Two claims would OR two answers together. Quartus builds nothing from the assertion.
+  always_ff @(posedge clk) begin
+    assert ($onehot0(
+        {dataslot_response.claim, savestate_response.claim, rtc_osnotify_response.claim}
+    ))
+    else begin
+      $error("ERROR host_claim: more than one concept module claimed command %04h",
+             host_request.command);
+    end
+  end
+
   dataslot_requests dataslot (
       .clk,
       .request  (host_request),

@@ -229,85 +229,95 @@ module core_top
 
   // not using the IR port, so turn off both the LED, and
   // disable the receive circuit to save power
-  assign port_ir_tx = 0;
-  assign port_ir_rx_disable = 1;
+  assign port_ir_tx = 1'b0;
+  assign port_ir_rx_disable = 1'b1;
 
   // bridge endianness
-  assign bridge_endian_little = 0;
+  assign bridge_endian_little = 1'b0;
 
   // cart is unused, so set all level translators accordingly
   // directions are 0:IN, 1:OUT
-  assign cart_tran_bank3 = 8'hzz;
+  assign cart_tran_bank3 = 'z;
   assign cart_tran_bank3_dir = 1'b0;
-  assign cart_tran_bank2 = 8'hzz;
+  assign cart_tran_bank2 = 'z;
   assign cart_tran_bank2_dir = 1'b0;
-  assign cart_tran_bank1 = 8'hzz;
+  assign cart_tran_bank1 = 'z;
   assign cart_tran_bank1_dir = 1'b0;
-  assign cart_tran_bank0 = 4'hf;
+  assign cart_tran_bank0 = 4'hF;
   assign cart_tran_bank0_dir = 1'b1;
   assign cart_tran_pin30 = 1'b0;  // reset or cs2, we let the hw control it by itself
-  assign cart_tran_pin30_dir = 1'bz;
+  assign cart_tran_pin30_dir = 'z;  // see the note on undriven outputs below
   assign cart_pin30_pwroff_reset = 1'b0;  // hardware can control this
-  assign cart_tran_pin31 = 1'bz;  // input
+  assign cart_tran_pin31 = 'z;  // input
   assign cart_tran_pin31_dir = 1'b0;  // input
 
   // link port is unused, set to input only to be safe
   // each bit may be bidirectional in some applications
-  assign port_tran_so = 1'bz;
+  assign port_tran_so = 'z;
   assign port_tran_so_dir = 1'b0;  // SO is output only
-  assign port_tran_si = 1'bz;
+  assign port_tran_si = 'z;
   assign port_tran_si_dir = 1'b0;  // SI is input only
-  assign port_tran_sck = 1'bz;
+  assign port_tran_sck = 'z;
   assign port_tran_sck_dir = 1'b0;  // clock direction can change
-  assign port_tran_sd = 1'bz;
+  assign port_tran_sd = 'z;
   assign port_tran_sd_dir = 1'b0;  // SD is input and not used
 
   // tie off the rest of the pins we are not using
-  assign cram0_a = 'h0;
-  assign cram0_dq = {16{1'bZ}};
-  assign cram0_clk = 0;
-  assign cram0_adv_n = 1;
-  assign cram0_cre = 0;
-  assign cram0_ce0_n = 1;
-  assign cram0_ce1_n = 1;
-  assign cram0_oe_n = 1;
-  assign cram0_we_n = 1;
-  assign cram0_ub_n = 1;
-  assign cram0_lb_n = 1;
+  assign cram0_a = '0;
+  assign cram0_dq = 'z;
+  assign cram0_clk = 1'b0;
+  assign cram0_adv_n = 1'b1;
+  assign cram0_cre = 1'b0;
+  assign cram0_ce0_n = 1'b1;
+  assign cram0_ce1_n = 1'b1;
+  assign cram0_oe_n = 1'b1;
+  assign cram0_we_n = 1'b1;
+  assign cram0_ub_n = 1'b1;
+  assign cram0_lb_n = 1'b1;
 
-  assign cram1_a = 'h0;
-  assign cram1_dq = {16{1'bZ}};
-  assign cram1_clk = 0;
-  assign cram1_adv_n = 1;
-  assign cram1_cre = 0;
-  assign cram1_ce0_n = 1;
-  assign cram1_ce1_n = 1;
-  assign cram1_oe_n = 1;
-  assign cram1_we_n = 1;
-  assign cram1_ub_n = 1;
-  assign cram1_lb_n = 1;
+  assign cram1_a = '0;
+  assign cram1_dq = 'z;
+  assign cram1_clk = 1'b0;
+  assign cram1_adv_n = 1'b1;
+  assign cram1_cre = 1'b0;
+  assign cram1_ce0_n = 1'b1;
+  assign cram1_ce1_n = 1'b1;
+  assign cram1_oe_n = 1'b1;
+  assign cram1_we_n = 1'b1;
+  assign cram1_ub_n = 1'b1;
+  assign cram1_lb_n = 1'b1;
 
-  assign dram_a = 'h0;
-  assign dram_ba = 'h0;
-  assign dram_dq = {16{1'bZ}};
-  assign dram_dqm = 'h0;
-  assign dram_clk = 'h0;
-  assign dram_cke = 'h0;
-  assign dram_ras_n = 'h1;
-  assign dram_cas_n = 'h1;
-  assign dram_we_n = 'h1;
+  assign dram_a = '0;
+  assign dram_ba = '0;
+  assign dram_dq = 'z;
+  assign dram_dqm = '0;
+  assign dram_clk = 1'b0;
+  assign dram_cke = 1'b0;
+  assign dram_ras_n = 1'b1;
+  assign dram_cas_n = 1'b1;
+  assign dram_we_n = 1'b1;
 
-  assign sram_a = 'h0;
-  assign sram_dq = {16{1'bZ}};
-  assign sram_oe_n = 1;
-  assign sram_we_n = 1;
-  assign sram_ub_n = 1;
-  assign sram_lb_n = 1;
+  assign sram_a = '0;
+  assign sram_dq = 'z;
+  assign sram_oe_n = 1'b1;
+  assign sram_we_n = 1'b1;
+  assign sram_ub_n = 1'b1;
+  assign sram_lb_n = 1'b1;
 
-  assign dbg_tx = 1'bZ;
-  assign user1 = 1'bZ;
-  assign aux_scl = 1'bZ;
-  assign vpll_feed = 1'bZ;
+  // Undriven outputs. These pins and cart_tran_pin30_dir are outputs only, but the template leaves
+  // their output buffers off, and no constant is known to be safe on each:
+  //   - cart_tran_pin30_dir sets a level translator's direction. Analogue doesn't document what the
+  //     hardware does with it undriven or driven, and a misconfigured translator with cartridge
+  //     power on can corrupt the save in an inserted cartridge.
+  //   - aux_scl is the clock of an internal I2C bus that Analogue reserves. An idle I2C master
+  //     releases the line. Driving it high or low could hold the bus against another device.
+  //   - vpll_feed is reserved, and Analogue says not to use it.
+  //   - dbg_tx and user1 go to a USB UART breakout and a solder pad, which may be unpowered or
+  //     wired to anything.
+  assign dbg_tx = 'z;
+  assign user1 = 'z;
+  assign aux_scl = 'z;
+  assign vpll_feed = 'z;
 
 
   //
@@ -396,113 +406,33 @@ module core_top
 
 
 
-  ////////////////////////////////////////////////////////////////////////////////////////
-
-
-
-  // video generation
-  // ~12,288,000 hz pixel clock
   //
-  // we want our video mode of 320x240 @ 60hz, this results in 204800 clocks per frame
-  // we need to add hblank and vblank times to this, so there will be a nondisplay area.
-  // it can be thought of as a border around the visible area.
-  // to make numbers simple, we can have 400 total clocks per line, and 320 visible.
-  // dividing 204800 by 400 results in 512 total lines per frame, and 240 visible.
-  // this pixel clock is fairly high for the relatively low resolution, but that's fine.
-  // PLL output has a minimum output frequency anyway.
+  // video: the demo, on the 12.288 MHz pixel clock. A core replaces demo_video with its own logic.
+  // frame_start and line_start are for that logic, and the demo doesn't use them.
+  //
+  wire logic [23:0] game_rgb;
+  wire logic game_de;
+  wire logic game_hs;
+  wire logic game_vs;
 
-  localparam logic [9:0] VID_V_BPORCH = 10'd10;
-  localparam logic [9:0] VID_V_ACTIVE = 10'd240;
-  localparam logic [9:0] VID_V_TOTAL  = 10'd512;
-  localparam logic [9:0] VID_H_BPORCH = 10'd10;
-  localparam logic [9:0] VID_H_ACTIVE = 10'd320;
-  localparam logic [9:0] VID_H_TOTAL  = 10'd400;
-
-  var logic  [15:0] frame_count;
-
-  var logic  [ 9:0] x_count;
-  var logic  [ 9:0] y_count;
-
-  wire logic [ 9:0] visible_x = x_count - VID_H_BPORCH;
-  wire logic [ 9:0] visible_y = y_count - VID_V_BPORCH;
-
-  var logic  [23:0] vidout_rgb;
-  var logic vidout_de, vidout_de_1;
-  var logic vidout_skip;
-  var logic vidout_vs;
-  var logic vidout_hs, vidout_hs_1;
-
-  var logic [9:0] square_x = 10'd135;
-  var logic [9:0] square_y = 10'd95;
+  demo_video video (
+      .clk(clk_core_12288),
+      .reset_n(reset_n_12288),
+      .frame_start(),
+      .line_start(),
+      .rgb(game_rgb),
+      .de(game_de),
+      .hs(game_hs),
+      .vs(game_vs)
+  );
 
   assign video_rgb_clock = clk_core_12288;
   assign video_rgb_clock_90 = clk_core_12288_90deg;
-  assign video_rgb = vidout_rgb;
-  assign video_de = vidout_de;
-  assign video_skip = vidout_skip;
-  assign video_vs = vidout_vs;
-  assign video_hs = vidout_hs;
-
-  always_ff @(posedge clk_core_12288) begin
-    // Every output defaults to idle, in reset too. Inactive screen areas are black.
-    vidout_de   <= 0;
-    vidout_skip <= 0;
-    vidout_vs   <= 0;
-    vidout_hs   <= 0;
-    vidout_rgb  <= 24'h0;
-
-    if (!reset_n_12288) begin
-
-      x_count <= 0;
-      y_count <= 0;
-
-    end else begin
-      vidout_hs_1 <= vidout_hs;
-      vidout_de_1 <= vidout_de;
-
-      // x and y counters
-      x_count <= x_count + 1'b1;
-      if (x_count == VID_H_TOTAL - 1) begin
-        x_count <= 0;
-
-        y_count <= y_count + 1'b1;
-        if (y_count == VID_V_TOTAL - 1) begin
-          y_count <= 0;
-        end
-      end
-
-      // generate sync
-      if (x_count == 0 && y_count == 0) begin
-        // sync signal in back porch
-        // new frame
-        vidout_vs   <= 1;
-        frame_count <= frame_count + 1'b1;
-      end
-
-      // we want HS to occur a bit after VS, not on the same cycle
-      if (x_count == 3) begin
-        // sync signal in back porch
-        // new line
-        vidout_hs <= 1;
-      end
-
-      // generate active video
-      if (x_count >= VID_H_BPORCH && x_count < VID_H_ACTIVE + VID_H_BPORCH) begin
-
-        if (y_count >= VID_V_BPORCH && y_count < VID_V_ACTIVE + VID_V_BPORCH) begin
-          // data enable. this is the active region of the line
-          vidout_de <= 1;
-
-          vidout_rgb[23:16] <= 8'd60;
-          vidout_rgb[15:8] <= 8'd60;
-          vidout_rgb[7:0] <= 8'd60;
-
-        end
-      end
-    end
-  end
-
-
+  assign video_rgb = game_rgb;
+  assign video_de = game_de;
+  assign video_skip = 1'b0;
+  assign video_vs = game_vs;
+  assign video_hs = game_hs;
 
 
   //

@@ -8,7 +8,7 @@
 # Logs go to sim/build/. vsim exits with the number of failed testbenches.
 
 if {![info exists tests]} {
-  set tests {tb_sync_pulse tb_core_clocks tb_bridge_map tb_core_bridge tb_core_top}
+  set tests {tb_sync_pulse tb_core_clocks tb_bridge_map tb_core_bridge tb_demo_video tb_core_top}
 }
 if {![info exists seed]} {
   set seed 1
@@ -40,12 +40,15 @@ set core {
   core/bridge_defaults.sv
   core/sync_pulse.sv
   core/core_clocks.sv
+  core/demo_video.sv
   core/core_top.sv
   sim/apf_bridge_model.sv
+  sim/video_checker.sv
   sim/tb_sync_pulse.sv
   sim/tb_core_clocks.sv
   sim/tb_bridge_map.sv
   sim/tb_core_bridge.sv
+  sim/tb_demo_video.sv
   sim/tb_core_top.sv
 }
 

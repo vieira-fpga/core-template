@@ -14,6 +14,9 @@ module tb_sync_pulse;
   var logic pulse_src = 1'b0;
   wire logic pulse_dst;
 
+  // Pulses count once the synchronizer has flushed its start values. Registers power up at 0 on
+  // the FPGA, but Verilator can start synch_3 with any value, which makes a pulse.
+  logic counting = 1'b0;
   int unsigned received = 0;
   int unsigned long_pulses = 0;
   logic pulse_dst_q = 1'b0;
@@ -42,7 +45,7 @@ module tb_sync_pulse;
 
   always @(posedge clk_dst) begin
     pulse_dst_q <= pulse_dst === 1'b1;
-    if (pulse_dst === 1'b1) begin
+    if (counting && pulse_dst === 1'b1) begin
       received++;
       if (pulse_dst_q) begin
         long_pulses++;
@@ -53,6 +56,7 @@ module tb_sync_pulse;
   initial begin
     // Let the synchronizer flush its power-up state.
     repeat (10) @(posedge clk_dst);
+    counting = 1'b1;
 
     for (int i = 0; i < EVENTS; i++) begin
       @(posedge clk_src);

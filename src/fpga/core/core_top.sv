@@ -451,6 +451,38 @@ module core_top
       .audio_lrck,
       .audio_dac
   );
+
+
+  // Inputs and bridge outputs the template doesn't use. Verilator's lint skips signals named
+  // unused, so this list keeps -Wall quiet about them. Take a signal out when the core uses it.
+  wire logic unused = ^{
+    clk_74b,
+    port_ir_rx,
+    cram0_wait,
+    cram1_wait,
+    vblank,
+    dbg_rx,
+    user2,
+    audio_adc,
+    cont1_key,
+    cont2_key,
+    cont3_key,
+    cont4_key,
+    cont1_joy,
+    cont2_joy,
+    cont3_joy,
+    cont4_joy,
+    cont1_trig,
+    cont2_trig,
+    cont3_trig,
+    cont4_trig,
+    dataslot_allcomplete_12288,
+    osnotify_inmenu_12288,
+    dataslot_update_12288,
+    rtc_valid_12288,
+    dataslot_to_core,
+    rtc_osnotify_to_core
+  };
 endmodule
 
 `default_nettype wire

@@ -35,6 +35,10 @@ module bridge_map
     output var apf_bus_t datatable_bus,
     input wire logic [31:0] datatable_rd_data
 );
+  // No region decodes bits 23:16. The APF regions repeat through them, and user region devices
+  // read bridge_addr themselves.
+  wire logic unused = ^bridge_addr[23:16];
+
   var bridge_region_t region;
   var logic [31:0] apf_wr_data;
   var logic [31:0] apf_rd_data;

@@ -44,6 +44,9 @@ module core_bridge
   wire logic [31:0] target_rd_data;
   wire logic [31:0] datatable_rd_data;
 
+  // Reading the datatable has no side effects.
+  wire logic unused = datatable_bus.rd;
+
   var host_request_t host_request;
   var host_response_t host_response;
   var host_response_t dataslot_response;

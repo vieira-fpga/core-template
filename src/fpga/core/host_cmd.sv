@@ -51,6 +51,9 @@ module host_cmd
   var logic [3:0][31:0] param = '0;
   var logic [3:0][31:0] response_reg = '0;
 
+  // Reading these registers has no side effects.
+  wire logic unused = bus.rd;
+
   var logic command_write;
   var logic [15:0] status;
   var logic finish;

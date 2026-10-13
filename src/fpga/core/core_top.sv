@@ -506,54 +506,21 @@ module core_top
 
 
   //
-  // audio i2s silence generator
-  // see other examples for actual audio generation
+  // audio: silence. sound_i2s sends signed 16-bit stereo samples from clk_core_12288 as 48 kHz
+  // I2S. It runs on clk_74a and derives no clocks. Drive audio_l and audio_r with the core's sound.
   //
-
-  // generate MCLK = 12.288mhz with fractional accumulator
-  var logic [21:0] audgen_accum;
-  var logic audgen_mclk;
-  localparam logic [20:0] CYCLE_48KHZ = 21'(122880 * 2);
-
-  always_ff @(posedge clk_74a) begin
-    audgen_accum <= audgen_accum + CYCLE_48KHZ;
-    if (audgen_accum >= 21'd742500) begin
-      audgen_mclk  <= ~audgen_mclk;
-      audgen_accum <= audgen_accum - 21'd742500 + CYCLE_48KHZ;
-    end
-  end
-
-  // generate SCLK = 3.072mhz by dividing MCLK by 4
-  var logic [1:0] aud_mclk_divider;
-  wire logic audgen_sclk = aud_mclk_divider[1]  /* synthesis keep*/;
-  var logic audgen_lrck_1;
-
-  always_ff @(posedge audgen_mclk) begin
-    aud_mclk_divider <= aud_mclk_divider + 1'b1;
-  end
-
-  // shift out audio data as I2S
-  // 32 total bits per channel, but only 16 active bits at the start and then 16 dummy bits
-  //
-  var logic [4:0] audgen_lrck_cnt;
-  var logic audgen_lrck;
-  var logic audgen_dac;
-
-  always_ff @(negedge audgen_sclk) begin
-    audgen_dac <= 1'b0;
-    // 48khz * 64
-    audgen_lrck_cnt <= audgen_lrck_cnt + 1'b1;
-    if (audgen_lrck_cnt == 31) begin
-      // switch channels
-      audgen_lrck <= ~audgen_lrck;
-
-    end
-  end
-
-  assign audio_mclk = audgen_mclk;
-  assign audio_dac  = audgen_dac;
-  assign audio_lrck = audgen_lrck;
-
+  sound_i2s #(
+      .CHANNEL_WIDTH(16),
+      .SIGNED_INPUT (1)
+  ) audio (
+      .clk_74a,
+      .clk_audio(clk_core_12288),
+      .audio_l  ('0),
+      .audio_r  ('0),
+      .audio_mclk,
+      .audio_lrck,
+      .audio_dac
+  );
 endmodule
 
 `default_nettype wire

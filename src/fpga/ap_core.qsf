@@ -750,6 +750,8 @@ set_global_assignment -name SYSTEMVERILOG_FILE core/bridge_defaults.sv
 set_global_assignment -name SYSTEMVERILOG_FILE core/sync_pulse.sv
 set_global_assignment -name SYSTEMVERILOG_FILE core/core_clocks.sv
 set_global_assignment -name SYSTEMVERILOG_FILE core/core_top.sv
+set_global_assignment -name SYSTEMVERILOG_FILE core/vendor/analogue-pocket-utils/sync_fifo.sv
+set_global_assignment -name SYSTEMVERILOG_FILE core/vendor/analogue-pocket-utils/sound_i2s.sv
 set_global_assignment -name SDC_FILE core/core_constraints.sdc
 set_global_assignment -name SIGNALTAP_FILE core/stp1.stp
 set_global_assignment -name QIP_FILE core/mf_pllbase.qip

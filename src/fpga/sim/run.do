@@ -17,13 +17,15 @@ if {![info exists seed]} {
 set build sim/build
 set work $build/work
 
-# Vendor Verilog compiles one file at a time, so a `default_nettype from one file can't leak into
+# Vendor code compiles one file at a time, so a `default_nettype from one file can't leak into
 # the next.
 set vendor {
   apf/common.v
   apf/mf_datatable.v
   core/mf_pllbase.v
   core/mf_pllbase/mf_pllbase_0002.v
+  core/vendor/analogue-pocket-utils/sync_fifo.sv
+  core/vendor/analogue-pocket-utils/sound_i2s.sv
 }
 
 set core {

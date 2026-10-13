@@ -12,6 +12,10 @@ _Avoid_: SPI bus, PMP bus
 The split of bridge addresses into regions: the core's own devices at `0x10xxxxxx` and APF's registers at `0xF8xxxxxx`, which hold the host command, target command, and datatable regions.
 _Avoid_: address decoder, memory map
 
+**User region**:
+The part of the bridge map that belongs to the core's own devices, such as its memories and registers. The core decides what it holds.
+_Avoid_: core region, user space
+
 **Host command**:
 A request APF makes of the core, such as reset enter, a data slot update, or an RTC update. APF writes the command, then polls until the core answers.
 _Avoid_: bridge command, APF command
@@ -19,6 +23,10 @@ _Avoid_: bridge command, APF command
 **Target command**:
 A request the core makes of APF, such as reading a data slot into the core's memory. The core starts it, and APF answers.
 _Avoid_: core command
+
+**Concept module**:
+The part of the bridge that owns one kind of command and its handshake with the core: data slot requests, savestates, RTC and menu notices, or target commands. Each host command belongs to at most one concept module.
+_Avoid_: command handler, sub-handler
 
 **Data slot**:
 A file APF loads into or saves from the core, as `data.json` lists it.
@@ -34,14 +42,14 @@ _Avoid_: stub, dummy handler
 ## Clocks and resets
 
 **Core clock**:
-`clk_core_12288`, the 12.288 MHz PLL output that drives the video.
+The 12.288 MHz clock from the PLL that drives the video.
 
 **PLL lock**:
 The PLL's report that its outputs run at their set frequencies. The core treats every PLL clock as unusable until lock.
 _Avoid_: PLL ready
 
 **Core reset**:
-`reset_n_12288`, the reset for logic on the core clock. It holds that logic in reset until APF releases the core and the PLL has locked, and it changes only on core clock edges.
+The reset for logic on the core clock. It holds that logic in reset until APF releases the core and the PLL has locked, and it changes only on core clock edges.
 _Avoid_: video reset
 
 **Level synchronizer**:

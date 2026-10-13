@@ -36,6 +36,17 @@ module tb_core_clocks;
       .pulse_12288
   );
 
+  // The testbench drives the clk_74a inputs through cb and samples the outputs through core_cb.
+  clocking cb @(posedge clk_74a);
+    default input #1step output #2ns;
+    output reset_n, level_74a, pulse_74a;
+  endclocking
+
+  clocking core_cb @(posedge clk_core_12288);
+    default input #1step output #2ns;
+    input reset_n_12288, level_12288, pulse_12288;
+  endclocking
+
   initial begin
     clk_74a <= 1'b0;
     forever begin
@@ -44,7 +55,7 @@ module tb_core_clocks;
   end
 
   initial begin
-    repeat (WATCHDOG_CYCLES) @(posedge clk_74a);
+    repeat (WATCHDOG_CYCLES) @(cb);
     $fatal(1, "ERROR watchdog: test did not finish in %0d cycles", WATCHDOG_CYCLES);
   end
 
@@ -62,7 +73,10 @@ module tb_core_clocks;
 
   always @(posedge clk_core_12288) begin
     last_core_edge = $realtime;
-    if (pulse_12288 === 1'b1) begin
+  end
+
+  always @(core_cb) begin
+    if (core_cb.pulse_12288 === 1'b1) begin
       pulses++;
     end
   end
@@ -85,18 +99,18 @@ module tb_core_clocks;
   } output_t;
 
   function automatic logic sample (input output_t which);
-    return which == RESET ? reset_n_12288 : level_12288;
+    return which == RESET ? core_cb.reset_n_12288 : core_cb.level_12288;
   endfunction
 
   // Waits up to MAX_LATENCY clk_core_12288 cycles for an output to equal value.
   task automatic expect_within(input string name, input output_t which, input logic value);
     int unsigned cycles = 0;
 
+    @(core_cb);
     while (sample (
         which
     ) !== value && cycles < MAX_LATENCY) begin
-      @(posedge clk_core_12288);
-      #1ps;
+      @(core_cb);
       cycles++;
     end
     check(name, sample (which) === value, $sformatf(
@@ -110,25 +124,25 @@ module tb_core_clocks;
     check("held_in_reset_before_lock", reset_n_12288 !== 1'b1, "out of reset before lock");
     expect_within("release_after_lock", RESET, 1'b1);
 
-    @(posedge clk_74a);
-    reset_n <= 1'b0;
+    @(cb);
+    cb.reset_n <= 1'b0;
     expect_within("reset_enter", RESET, 1'b0);
-    repeat ($urandom_range(3, 40)) @(posedge clk_74a);
-    reset_n <= 1'b1;
+    repeat ($urandom_range(3, 40)) @(cb);
+    cb.reset_n <= 1'b1;
     expect_within("reset_exit", RESET, 1'b1);
 
-    @(posedge clk_74a);
-    level_74a <= 1'b1;
+    @(cb);
+    cb.level_74a <= 1'b1;
     expect_within("level_rise", LEVEL, 1'b1);
-    @(posedge clk_74a);
-    level_74a <= 1'b0;
+    @(cb);
+    cb.level_74a <= 1'b0;
     expect_within("level_fall", LEVEL, 1'b0);
 
-    @(posedge clk_74a);
-    pulse_74a <= 1'b1;
-    @(posedge clk_74a);
-    pulse_74a <= 1'b0;
-    repeat (MAX_LATENCY + 1) @(posedge clk_core_12288);
+    @(cb);
+    cb.pulse_74a <= 1'b1;
+    @(cb);
+    cb.pulse_74a <= 1'b0;
+    repeat (MAX_LATENCY + 1) @(core_cb);
     check("pulse_once", pulses == 1, $sformatf("got %0d pulses for 1 event", pulses));
 
     $display("SUMMARY tb_core_clocks checks=%0d errors=%0d", checks, errors);

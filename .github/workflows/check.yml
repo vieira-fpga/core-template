@@ -1,0 +1,48 @@
+# Formats and lints our SystemVerilog with Verible, then lints the RTL and runs the testbenches
+# with Verilator. Questa needs a license, so sim/run.do runs only on a developer's machine.
+name: Check
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  verible:
+    runs-on: ubuntu-latest
+    env:
+      VERIBLE_VERSION: v0.0-4296-g0f262651
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install Verible
+        run: |
+          curl --fail --location --silent --show-error \
+            "https://github.com/chipsalliance/verible/releases/download/${VERIBLE_VERSION}/verible-${VERIBLE_VERSION}-linux-static-x86_64.tar.gz" \
+            | tar --extract --gzip --directory "$RUNNER_TEMP"
+          echo "$RUNNER_TEMP/verible-${VERIBLE_VERSION}/bin" >> "$GITHUB_PATH"
+
+      - name: Check formatting
+        working-directory: src/fpga
+        run: verible-verilog-format --verify --inplace core/*.sv sim/*.sv sim/lint/*.sv
+
+      - name: Lint
+        working-directory: src/fpga
+        run: verible-verilog-lint --rules_config_search core/*.sv sim/*.sv sim/lint/*.sv
+
+  verilator:
+    runs-on: ubuntu-latest
+    # The Verilator release that verification.md's rules were tested on.
+    container: verilator/verilator:v5.050
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Lint and run testbenches
+        working-directory: src/fpga
+        run: bash sim/verilator.sh
+
+      - name: Keep logs and frame dumps
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: verilator-logs
+          path: src/fpga/sim/build/

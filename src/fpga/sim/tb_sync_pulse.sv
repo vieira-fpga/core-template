@@ -8,12 +8,16 @@ module tb_sync_pulse;
 
   localparam int unsigned EVENTS = 500;
   localparam int unsigned MIN_SPACING = 25;  // clk_74a cycles, just over 4 clk_core_12288 cycles
+  localparam int unsigned WATCHDOG_CYCLES = EVENTS * 100;  // clk_74a cycles
 
   var logic clk_src;
   var logic clk_dst;
   var logic pulse_src = 1'b0;
   wire logic pulse_dst;
 
+  // Pulses count once the synchronizer has flushed its start values. Registers power up at 0 on
+  // the FPGA, but Verilator can start synch_3 with any value, which makes a pulse.
+  logic counting = 1'b0;
   int unsigned received = 0;
   int unsigned long_pulses = 0;
   logic pulse_dst_q = 1'b0;
@@ -24,6 +28,17 @@ module tb_sync_pulse;
       .clk_dst,
       .pulse_dst
   );
+
+  // The testbench drives pulse_src through src_cb and samples pulse_dst through dst_cb.
+  clocking src_cb @(posedge clk_src);
+    default input #1step output #2ns;
+    output pulse_src;
+  endclocking
+
+  clocking dst_cb @(posedge clk_dst);
+    default input #1step output #2ns;
+    input pulse_dst;
+  endclocking
 
   initial begin
     clk_src <= 1'b0;
@@ -40,9 +55,14 @@ module tb_sync_pulse;
     end
   end
 
-  always @(posedge clk_dst) begin
-    pulse_dst_q <= pulse_dst === 1'b1;
-    if (pulse_dst === 1'b1) begin
+  initial begin
+    repeat (WATCHDOG_CYCLES) @(src_cb);
+    $fatal(1, "ERROR watchdog: test did not finish in %0d cycles", WATCHDOG_CYCLES);
+  end
+
+  always @(dst_cb) begin
+    pulse_dst_q <= dst_cb.pulse_dst === 1'b1;
+    if (counting && dst_cb.pulse_dst === 1'b1) begin
       received++;
       if (pulse_dst_q) begin
         long_pulses++;
@@ -52,16 +72,18 @@ module tb_sync_pulse;
 
   initial begin
     // Let the synchronizer flush its power-up state.
-    repeat (10) @(posedge clk_dst);
+    repeat (10) @(dst_cb);
+    counting = 1'b1;
+    @(src_cb);
 
     for (int i = 0; i < EVENTS; i++) begin
-      @(posedge clk_src);
-      pulse_src <= 1'b1;
-      @(posedge clk_src);
-      pulse_src <= 1'b0;
-      repeat ((i % 4 == 0 ? MIN_SPACING : $urandom_range(MIN_SPACING, 80)) - 1) @(posedge clk_src);
+      src_cb.pulse_src <= 1'b1;
+      @(src_cb);
+      src_cb.pulse_src <= 1'b0;
+      // The next event reaches the DUT MIN_SPACING or more clk_74a cycles after this one.
+      repeat ((i % 4 == 0 ? MIN_SPACING : $urandom_range(MIN_SPACING, 80)) - 1) @(src_cb);
     end
-    repeat (10) @(posedge clk_dst);
+    repeat (10) @(dst_cb);
 
     $display("SUMMARY tb_sync_pulse checks=2 errors=%0d",
              int'(received != EVENTS) + int'(long_pulses != 0));

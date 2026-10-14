@@ -1,8 +1,9 @@
 `default_nettype none
 
 // End-to-end test of core_top as the template ships it: the real PLL model, the default responder,
-// and the bridge driven the way apf/io_bridge_peripheral.v drives it. Run with the altera_mf_ver
-// and altera_lnsim_ver libraries, from src/fpga so the datatable finds apf/build_id.mif.
+// and the bridge driven the way apf/io_bridge_peripheral.v drives it. video_checker checks the
+// video timing throughout. Run with the altera_mf_ver and altera_lnsim_ver libraries, from
+// src/fpga so the datatable finds apf/build_id.mif.
 module tb_core_top;
   timeunit 1ns; timeprecision 1ps;
 
@@ -153,6 +154,18 @@ module tb_core_top;
       .cont2_trig('0),
       .cont3_trig('0),
       .cont4_trig('0)
+  );
+
+  // Checks the scaler's timing rules on every pixel clock.
+  bind core_top video_checker #(
+      .H_ACTIVE(320)
+  ) video_check (
+      .clk(video_rgb_clock),
+      .reset_n(reset_n_12288),
+      .rgb(video_rgb),
+      .de(video_de),
+      .hs(video_hs),
+      .vs(video_vs)
   );
 
   apf_bridge_model host (

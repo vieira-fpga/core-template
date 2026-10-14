@@ -44,6 +44,9 @@ module core_bridge
   wire logic [31:0] target_rd_data;
   wire logic [31:0] datatable_rd_data;
 
+  // Reading the datatable has no side effects.
+  wire logic unused = datatable_bus.rd;
+
   var host_request_t host_request;
   var host_response_t host_response;
   var host_response_t dataslot_response;
@@ -84,6 +87,17 @@ module core_bridge
   // Each concept module answers only the commands it claims, and zeros otherwise.
   always_comb begin
     host_response = dataslot_response | savestate_response | rtc_osnotify_response;
+  end
+
+  // Two claims would OR two answers together. Quartus builds nothing from the assertion.
+  always_ff @(posedge clk) begin
+    assert ($onehot0(
+        {dataslot_response.claim, savestate_response.claim, rtc_osnotify_response.claim}
+    ))
+    else begin
+      $error("ERROR host_claim: more than one concept module claimed command %04h",
+             host_request.command);
+    end
   end
 
   dataslot_requests dataslot (

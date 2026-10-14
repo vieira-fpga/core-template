@@ -1,8 +1,10 @@
 `default_nettype none
 
 // Tests core_bridge through the bridge bus and its core-facing ports: the host command handshakes
-// of each concept module, target commands, and status and reset. The testbench plays the core,
-// so it can delay acks and pick results. Run with the altera_mf_ver library.
+// of each concept module, target commands, status and reset, user region reads and writes, and
+// the endian swap. The testbench plays the core, so it can delay acks and pick results, and a
+// user region device that answers USER_LATENCY cycles after user_rd, like a slow memory. Run with
+// the altera_mf_ver library.
 module tb_core_bridge;
   timeunit 1ns; timeprecision 1ps;
 
@@ -10,9 +12,15 @@ module tb_core_bridge;
 
   localparam logic [31:0] TARGET_CMD = 32'hF800_1000;
   localparam logic [31:0] TARGET_PARAM0 = 32'hF800_1020;
+  localparam logic [31:0] HOST_CMD = 32'hF800_0000;
+  localparam logic [31:0] HOST_PARAM0 = 32'hF800_0020;
+  localparam logic [31:0] HOST_PARAM_POINTER = 32'hF800_0004;
+  localparam logic [31:0] DATATABLE = 32'hF800_2000;
+  localparam int unsigned USER_LATENCY = 10;
   localparam int unsigned WATCHDOG_CYCLES = 1_000_000;
 
   var logic clk;
+  var logic bridge_endian_little = 1'b0;
 
   wire logic reset_n;
   wire logic [31:0] bridge_addr;
@@ -20,6 +28,10 @@ module tb_core_bridge;
   wire logic [31:0] bridge_rd_data;
   wire logic bridge_wr;
   wire logic [31:0] bridge_wr_data;
+
+  wire logic user_rd;
+  wire logic user_wr;
+  var logic [31:0] user_rd_data = '0;
 
   var logic status_boot_done = 1'b0;
   var logic status_setup_done = 1'b0;
@@ -39,15 +51,15 @@ module tb_core_bridge;
   core_bridge dut (
       .clk,
       .reset_n,
-      .bridge_endian_little(1'b0),
+      .bridge_endian_little,
       .bridge_addr,
       .bridge_rd,
       .bridge_rd_data,
       .bridge_wr,
       .bridge_wr_data,
-      .user_rd(),
-      .user_wr(),
-      .user_rd_data('0),
+      .user_rd,
+      .user_wr,
+      .user_rd_data,
       .status_boot_done,
       .status_setup_done,
       .status_running,
@@ -75,6 +87,8 @@ module tb_core_bridge;
   clocking cb @(posedge clk);
     default input #1step output #2ns;
     input dataslot_to_core, savestate_to_core, rtc_osnotify_to_core, target_response;
+    input bridge_addr, user_rd, user_wr;
+    output bridge_endian_little, user_rd_data;
     output status_boot_done, status_setup_done, status_running;
     output dataslot_from_core, savestate_from_core;
     inout target_request;
@@ -90,6 +104,25 @@ module tb_core_bridge;
   initial begin
     repeat (WATCHDOG_CYCLES) @(posedge clk);
     $fatal(1, "ERROR watchdog: test did not finish in %0d cycles", WATCHDOG_CYCLES);
+  end
+
+  // The user region device: latches the address on user_rd, answers USER_LATENCY cycles later, and
+  // holds the data until the next read.
+  initial begin
+    forever begin
+      logic [31:0] addr;
+
+      @(cb iff cb.user_rd);
+      addr = cb.bridge_addr;
+      repeat (USER_LATENCY) @(cb);
+      cb.user_rd_data <= {8'hD4, addr[23:0]};
+    end
+  end
+
+  int unsigned user_writes = 0;
+
+  always @(cb) begin
+    user_writes += int'(cb.user_wr);
   end
 
   // Counts the rising edges and high cycles of the one-cycle outputs.
@@ -356,6 +389,59 @@ module tb_core_bridge;
           "openfile didn't finish with err 0");
   endtask
 
+  // A read returns its own region's data while the next transaction already addresses another
+  // region, and each user region write strobes user_wr once.
+  task automatic test_user_region();
+    logic [31:0] data;
+    int unsigned writes;
+
+    host.read_word(32'h1000_0200, data, HOST_PARAM_POINTER);
+    check("user_read_then_host", data == 32'hD400_0200, $sformatf("read %08h", data));
+    host.read_word(HOST_PARAM_POINTER, data, 32'h1000_0100);
+    check("host_read_then_user", data == 32'h0000_0020, $sformatf("read %08h", data));
+    host.write_word(DATATABLE + 32'h10, 32'h0BAD_F00D);
+    host.read_word(DATATABLE + 32'h10, data, 32'h10FF_FFFC);
+    check("datatable_read_then_user", data == 32'h0BAD_F00D, $sformatf("read %08h", data));
+
+    writes = user_writes;
+    host.write_word(32'h1000_0300, 32'h1234_5678);
+    host.write_word(HOST_PARAM0, 32'h0);
+    check("user_write_strobe", user_writes - writes == 1, $sformatf(
+          "%0d user_wr strobes for one user region write", user_writes - writes));
+  endtask
+
+  function automatic logic [31:0] swap_bytes(input logic [31:0] word);
+    return {word[7:0], word[15:8], word[23:16], word[31:24]};
+  endfunction
+
+  // With bridge_endian_little set, APF writes and reads every word byte-swapped. An RTC command
+  // sent that way must reach the core with its words in order, and its answer must read back
+  // swapped. The user region sees the bus as it is.
+  task automatic test_endian();
+    logic [31:0] word;
+    logic answered;
+
+    cb.bridge_endian_little <= 1'b1;
+    @(cb);
+
+    host.write_word(HOST_PARAM0, swap_bytes(32'h6000_0003));
+    host.write_word(HOST_CMD, swap_bytes({HOST_MAGIC_COMMAND, 16'h0090}));
+    answered = 1'b0;
+    for (int poll = 0; poll < 64 && !answered; poll++) begin
+      host.read_word(HOST_CMD, word);
+      answered = swap_bytes(word) == {HOST_MAGIC_OK, 16'h0000};
+    end
+    check("endian_command_answered", answered, $sformatf("command register reads %08h", word));
+    check("endian_param_in_order", rtc_osnotify_to_core.rtc_epoch_seconds == 32'h6000_0003,
+          $sformatf("epoch seconds %08h", rtc_osnotify_to_core.rtc_epoch_seconds));
+
+    host.read_word(32'h1000_0300, word);
+    check("endian_user_unswapped", word == 32'hD400_0300, $sformatf("read %08h", word));
+
+    cb.bridge_endian_little <= 1'b0;
+    @(cb);
+  endtask
+
   initial begin
     repeat (10) @(cb);
 
@@ -364,6 +450,8 @@ module tb_core_bridge;
     test_dataslot_requests();
     test_savestate();
     test_target_commands();
+    test_user_region();
+    test_endian();
 
     $display("SUMMARY tb_core_bridge checks=%0d errors=%0d", checks, errors);
     if (errors != 0) begin

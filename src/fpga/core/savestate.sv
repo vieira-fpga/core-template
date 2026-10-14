@@ -22,6 +22,9 @@ module savestate
   // Part of the bridge, which runs before the core leaves reset: starts from power-up values.
   var savestate_to_core_t requested = '0;
 
+  // A savestate command acts for as long as it's active, so the first cycle needs nothing extra.
+  wire logic unused = request.start;
+
   var logic is_start;
   var logic is_load;
   var logic start_wanted;

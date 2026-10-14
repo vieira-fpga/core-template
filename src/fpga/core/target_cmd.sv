@@ -39,6 +39,9 @@ module target_cmd
   var logic done = 1'b0;
   var logic [2:0] err = '0;
 
+  // Reading these registers has no side effects.
+  wire logic unused = bus.rd;
+
   var logic [15:0] magic;
   var logic issue_ready_to_run;
   var logic ready;

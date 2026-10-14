@@ -1,36 +1,26 @@
 # Core template
 
-LLMs wrote most of the SystemVerilog, testbenches, and scripts that this repository adds to Analogue's template. Claude Opus 5.5 in Claude Code, run through T3 Code, wrote the changes from the Quartus 25.1std migration onward. The model and harness behind the earlier commits that split the bridge by concept, set up Verible, and idled the video in reset still need to be named here.
+LLMs wrote most of the SystemVerilog and testbenches that this repository adds to Analogue's template. Claude Opus 5.5 in Claude Code, run through T3 Code, wrote the changes from the Quartus 25.1std migration onward. The model and harness behind the earlier commits that split the bridge by concept, set up Verible, and idled the video in reset still need to be named here.
 
 This is an Analogue Pocket openFPGA core that shows a gray 320x240 screen. It answers APF over the bridge and is a starting point for new cores. This version has run only in simulation, not on a Pocket.
 
 ## Build the core
 
-You need Quartus Prime Lite or Standard 25.1std with Cyclone V support.
+You need Quartus Prime Lite or Standard 25.1std with Cyclone V support. Compile from `src/fpga`:
 
-To compile the core and write `output/bitstream.rbf_r`, run the build script from the repository root:
-
-```powershell
-./build.ps1
+```sh
+quartus_sh --flow compile ap_core
 ```
 
-If Quartus isn't in `C:\altera_lite\25.1std`, pass its `bin64` folder with `-QuartusBin`. The script stops when the compile fails. The timing and fit reports are in `src/fpga/output_files/`.
+The timing and fit reports are in `src/fpga/output_files/`. Pocket loads `output/bitstream.rbf_r`, which is `output_files/ap_core.rbf` with the bit order of each byte reversed.
 
 ## Test the core
 
-Run every command from `src/fpga`.
+Run every command from `src/fpga`. The testbenches write files to `sim/build/`, so create it first.
 
-Questa runs all five testbenches. Set `SALT_LICENSE_SERVER` to your Questa license file first:
+Questa runs all five testbenches. `tb_core_clocks`, `tb_core_bridge`, and `tb_core_top` need Intel's PLL and RAM models from the `altera_mf_ver` and `altera_lnsim_ver` libraries. Compile the vendor files one at a time, so a `` `default_nettype `` in one can't leak into the next.
 
-```powershell
-vsim -c -do sim/run.do
-```
-
-Verilator lints the RTL and runs `tb_sync_pulse` and `tb_demo_video` with zeros, ones, and random start values. On Windows, run it from the MSYS2 UCRT64 shell:
-
-```sh
-sim/verilator.sh
-```
+Verilator builds `tb_sync_pulse` and `tb_demo_video`. Pass it `sim/verilator.vlt`, which turns off lint in vendor code and lists the few warnings it waives in ours. To lint the RTL, give Verilator the null modules in `sim/lint/` in place of the vendor modules and Intel IP, with `core_top` as the top module.
 
 Verible formats and lints our SystemVerilog. It never touches vendor code:
 
@@ -39,15 +29,13 @@ verible-verilog-format --verify --inplace core/*.sv sim/*.sv sim/lint/*.sv
 verible-verilog-lint --rules_config_search core/*.sv sim/*.sv sim/lint/*.sv
 ```
 
-The GitHub Actions workflow in `.github/workflows/` runs Verible and Verilator on each push and pull request. Questa needs a license, so it doesn't run in CI.
-
 ## Find your way around
 
 - `src/fpga/core/core_top.sv` connects the core to APF: the pins, the bridge, video, and audio.
 - `src/fpga/core/demo_video.sv` draws the gray screen. It uses no openFPGA signals. Replace it with the core's own logic.
 - `src/fpga/core/core_bridge.sv` and the modules it instantiates answer APF's host commands and send target commands. `GLOSSARY.md` defines the bridge terms.
 - `src/fpga/core/core_clocks.sv` holds the PLL, the reset for the core clock, and the clock domain crossings.
-- `src/fpga/sim/` holds the testbenches and the simulation scripts.
+- `src/fpga/sim/` holds the testbenches and the models they use.
 - `src/fpga/apf/` is Analogue's framework, and `src/fpga/core/vendor/` holds modules from other projects. Don't edit either.
 
 ## Credits

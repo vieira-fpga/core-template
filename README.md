@@ -2,7 +2,7 @@
 
 LLMs wrote most of the SystemVerilog and testbenches that this repository adds to Analogue's template. Claude Opus 5.5 in Claude Code, run through T3 Code, wrote the changes from the Quartus 25.1std migration onward. The model and harness behind the earlier commits that split the bridge by concept, set up Verible, and idled the video in reset still need to be named here.
 
-This is an Analogue Pocket openFPGA core that shows a gray 320x240 screen. It answers APF over the bridge and is a starting point for new cores. This version has run only in simulation, not on a Pocket.
+This is an Analogue Pocket openFPGA core that shows a gray 320x240 screen. It answers APF over the bridge and is a starting point for new cores. Built from afabe4d, it shows the gray screen on an Analogue Pocket.
 
 ## Build the core
 
